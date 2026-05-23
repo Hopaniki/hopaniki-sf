@@ -198,6 +198,22 @@
 
         // カテゴリーボタンを生成
         function renderCategories() {
+            // お気に入り専用ボタンを追加
+            const favBtn = document.createElement('button');
+            favBtn.className = 'whitespace-nowrap px-4 py-2 rounded-full bg-neutral-800 border border-neutral-700 text-sm font-medium transition-colors hover:bg-neutral-700 text-neutral-300 focus:outline-none';
+            favBtn.textContent = '⭐ お気に入り';
+            
+            favBtn.addEventListener('click', () => {
+                currentCategory = '⭐ お気に入り';
+                currentSearchQuery = '';
+                searchInput.value = ''; // 検索バーをクリア
+                updateCategoryButtons();
+                displayCombos();
+            });
+            
+            navContainer.appendChild(favBtn);
+
+            // 通常のカテゴリーボタン
             categories.forEach((cat) => {
                 const btn = document.createElement('button');
                 btn.className = 'whitespace-nowrap px-4 py-2 rounded-full bg-neutral-800 border border-neutral-700 text-sm font-medium transition-colors hover:bg-neutral-700 text-neutral-300 focus:outline-none';
@@ -230,12 +246,19 @@
                     item.situation.toLowerCase().includes(q) || 
                     (item.notes && item.notes.toLowerCase().includes(q))
                 );
+            } else if (currentCategory === '⭐ お気に入り') {
+                // お気に入りのみの抽出
+                targetCombos = comboData.filter(item => favorites.includes(item.id));
             } else {
                 targetCombos = comboData.filter(item => item.category === currentCategory);
             }
 
             if (targetCombos.length === 0) {
-                comboContainer.innerHTML = '<div class="text-center text-neutral-500 mt-10"><p>見つかりませんでした</p></div>';
+                if (currentCategory === '⭐ お気に入り' && !currentSearchQuery) {
+                    comboContainer.innerHTML = '<div class="text-center text-neutral-500 mt-10"><p>お気に入りに登録されたコンボはありません。<br>各コンボの右上の☆をタップして登録してください。</p></div>';
+                } else {
+                    comboContainer.innerHTML = '<div class="text-center text-neutral-500 mt-10"><p>見つかりませんでした</p></div>';
+                }
                 return;
             }
 
@@ -247,15 +270,38 @@
 
             // 1. お気に入り（ピン留め）の表示
             if (favCombos.length > 0) {
-                const favHeader = document.createElement('h2');
-                favHeader.className = 'text-xl font-black text-yellow-400 mt-6 mb-3 border-b-2 border-yellow-500 pb-1 fade-in tracking-wider';
-                favHeader.innerHTML = '⭐ お気に入り (ピン留め)';
-                comboContainer.appendChild(favHeader);
+                if (currentCategory !== '⭐ お気に入り' || currentSearchQuery) {
+                    const favHeader = document.createElement('h2');
+                    favHeader.className = 'text-xl font-black text-yellow-400 mt-6 mb-3 border-b-2 border-yellow-500 pb-1 fade-in tracking-wider';
+                    favHeader.innerHTML = '⭐ お気に入り (ピン留め)';
+                    comboContainer.appendChild(favHeader);
+                    
+                    favCombos.forEach(item => {
+                        comboContainer.appendChild(createComboCard(item, delay, true));
+                        delay += 50;
+                    });
+                } else {
+                    // 「⭐ お気に入り」カテゴリーを見ている時は、状況ごとにグループ化して綺麗に表示
+                    const groupedFavs = favCombos.reduce((acc, curr) => {
+                        if (!acc[curr.situation]) acc[curr.situation] = [];
+                        acc[curr.situation].push(curr);
+                        return acc;
+                    }, {});
+                    
+                    for (const [situation, combos] of Object.entries(groupedFavs)) {
+                        const header = document.createElement('h2');
+                        header.className = 'text-lg font-bold text-yellow-500 mt-8 mb-3 border-b border-neutral-700 pb-1 fade-in tracking-wide';
+                        header.style.animationDelay = `${delay}ms`;
+                        header.textContent = `🎯 ${situation}`;
+                        comboContainer.appendChild(header);
+                        delay += 50;
 
-                favCombos.forEach(item => {
-                    comboContainer.appendChild(createComboCard(item, delay, true));
-                    delay += 50;
-                });
+                        combos.forEach(item => {
+                            comboContainer.appendChild(createComboCard(item, delay, true));
+                            delay += 50;
+                        });
+                    }
+                }
             }
 
             // 2. その他のコンボ表示 (状況ごとにグループ化)
@@ -319,4 +365,5 @@
     </script>
 </body>
 </html>
+
 
